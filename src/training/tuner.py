@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import logging
 from typing import Optional
+import copy
 
 import optuna
 import pandas as pd
@@ -69,7 +70,7 @@ def run_optuna_tuning(
         max_hold = trial.suggest_int("max_holding_period", 12, 144, step=12)
 
         # Build trial config
-        trial_config = base_config.model_copy(deep=True)
+        trial_config = copy.deepcopy(base_config)
         trial_config.labels.pt_multiplier = pt_mult
         trial_config.labels.sl_multiplier = sl_mult
         trial_config.labels.max_holding_period = max_hold
@@ -176,7 +177,7 @@ def run_optuna_tuning(
     logger.info("  max_holding_period: %d bars", best_params["max_holding_period"])
     
     # Re-train the best model to return it
-    best_config = base_config.model_copy(deep=True)
+    best_config = copy.deepcopy(base_config)
     best_config.labels.pt_multiplier = best_params["pt_multiplier"]
     best_config.labels.sl_multiplier = best_params["sl_multiplier"]
     best_config.labels.max_holding_period = best_params["max_holding_period"]
