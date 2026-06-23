@@ -171,9 +171,15 @@ def train_model(
         y_pred = model.predict(X_test)
         y_pred_proba = model.predict_proba(X_test)
 
+        # Apply Meta-Labeling Trade Filter
+        from src.training.trade_filter import apply_confidence_filter
+        y_pred_filtered, filter_stats = apply_confidence_filter(
+            y_pred, y_pred_proba, config.meta_label
+        )
+
         # Map predictions back: {0, 1, 2} → {-1, 0, 1}
         inv_map = {0: -1, 1: 0, 2: 1}
-        y_pred_original = pd.Series(y_pred, index=X_test.index).map(inv_map)
+        y_pred_original = pd.Series(y_pred_filtered, index=X_test.index).map(inv_map)
         y_test_original = y_test.map(inv_map)
 
         # Get corresponding labels for metric computation
@@ -186,8 +192,9 @@ def train_model(
             labels_df=test_labels,
             cost_config=config.costs,
         )
+        fold_metrics["pct_filtered"] = filter_stats["pct_filtered"]
 
-        logger.info("  Fold %d metrics:", fold_idx + 1)
+        logger.info("  Fold %d metrics (Filtered %.1f%% of trades):", fold_idx + 1, filter_stats["pct_filtered"])
         for k, v in fold_metrics.items():
             if isinstance(v, float):
                 logger.info("    %s: %.4f", k, v)

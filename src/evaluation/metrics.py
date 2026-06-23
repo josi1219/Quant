@@ -267,6 +267,7 @@ def format_metrics(metrics: dict) -> str:
             "sharpe_ratio",
             "max_drawdown_pips",
             "avg_holding_period",
+            "pct_filtered",
         ],
         "Cost-Aware Metrics": [
             "expected_return_pips",
