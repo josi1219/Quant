@@ -66,8 +66,8 @@ def run_optuna_tuning(
         # Instead of guessing 1.5x vol and 8 hrs, let Optuna find it!
         pt_mult = trial.suggest_float("pt_multiplier", 0.5, 3.0, step=0.1)
         sl_mult = trial.suggest_float("sl_multiplier", 0.5, 3.0, step=0.1)
-        # Hold time: 12 bars (1 hr) up to 144 bars (12 hrs)
-        max_hold = trial.suggest_int("max_holding_period", 12, 144, step=12)
+        # Hold time: 24 bars (2 hrs) up to 144 bars (12 hrs)
+        max_hold = trial.suggest_int("max_holding_period", 24, 144, step=12)
 
         # Build trial config
         trial_config = copy.deepcopy(base_config)

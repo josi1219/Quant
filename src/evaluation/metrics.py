@@ -156,18 +156,41 @@ def _trading_metrics(
     ret_pips = aligned["ret_pips"].fillna(0)
     holding_period = aligned["holding_period"].fillna(0)
 
+    # Get t1 to track exit times
+    t1_times = aligned["t1"] if "t1" in aligned.columns else None
+
+    # Filter trades to One-Trade-At-A-Time (no overlaps)
+    trade_mask = pd.Series(False, index=y_pred.index)
+    active_until = pd.Timestamp.min
+    if active_until.tz is None and y_pred.index.tz is not None:
+        active_until = active_until.tz_localize(y_pred.index.tz)
+
+    for i in range(len(y_pred)):
+        pred = y_pred.iloc[i]
+        dt = y_pred.index[i]
+        
+        if pred != 0 and dt >= active_until:
+            trade_mask.iloc[i] = True
+            # Find when this trade exits
+            if t1_times is not None and pd.notna(t1_times.iloc[i]):
+                active_until = t1_times.iloc[i]
+            else:
+                # Fallback: estimate time if t1 missing
+                active_until = dt + pd.to_timedelta(holding_period.iloc[i] * 5, unit='min')
+
     # Compute PnL per prediction
     # Long: pnl = ret_pips; Short: pnl = -ret_pips; Hold: pnl = 0
     pnl_pips = pd.Series(0.0, index=y_pred.index)
-    long_mask = y_pred == 1
-    short_mask = y_pred == -1
+    long_mask = (y_pred == 1) & trade_mask
+    short_mask = (y_pred == -1) & trade_mask
     pnl_pips[long_mask] = ret_pips[long_mask]
     pnl_pips[short_mask] = -ret_pips[short_mask]
 
-    # Trades = predictions that are NOT hold
-    trade_mask = y_pred != 0
     n_trades = trade_mask.sum()
     metrics["n_trades"] = int(n_trades)
+    
+    total_signals = (y_pred != 0).sum()
+    metrics["pct_filtered"] = (total_signals - n_trades) / total_signals if total_signals > 0 else 0.0
 
     if n_trades == 0:
         logger.warning("No trades predicted — all metrics will be zero")
@@ -207,13 +230,16 @@ def _trading_metrics(
         gross_profit / gross_loss if gross_loss > 0 else float("inf")
     )
 
-    # Sharpe ratio (annualized)
-    # Assume ~250 trading days, ~96 M15 bars/day = 24000 bars/year
-    if trade_pnl.std() > 0:
-        bars_per_year = 250 * 96
-        sharpe = (trade_pnl.mean() / trade_pnl.std()) * np.sqrt(
-            bars_per_year / max(1, len(y_pred) / n_trades)
-        )
+    # Calculate Daily Sharpe Ratio
+    # Group PnL by calendar day
+    daily_pnl = pnl_pips.resample("D").sum()
+    # Subtract costs daily (only for trades made that day)
+    daily_trades = trade_mask.resample("D").sum()
+    daily_net_pnl = daily_pnl - (daily_trades * total_cost)
+
+    if daily_net_pnl.std() > 0:
+        # Annualize daily sharpe
+        sharpe = (daily_net_pnl.mean() / daily_net_pnl.std()) * np.sqrt(250)
         metrics["sharpe_ratio"] = sharpe
     else:
         metrics["sharpe_ratio"] = 0.0
