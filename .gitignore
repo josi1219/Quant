@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
+data/raw/
+models/
+*.zip
+EURUSD_Historical_Data.csv

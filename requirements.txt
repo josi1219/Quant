@@ -1,0 +1,34 @@
+# ===========================================================================
+# EURUSD Trading Model — Python Dependencies
+# ===========================================================================
+# Install: pip install -r requirements.txt
+# Colab:   !pip install -r /content/drive/MyDrive/trading_model/requirements.txt
+# ===========================================================================
+
+# --- Core Data & Numerics ---
+numpy>=1.24,<2.0
+pandas>=2.0
+scipy>=1.10
+
+# --- Machine Learning ---
+lightgbm>=4.0
+scikit-learn>=1.3
+optuna>=3.4
+
+# --- Model Export ---
+onnx>=1.14
+onnxmltools>=1.12
+skl2onnx>=1.16
+
+# --- Statistical Tests ---
+statsmodels>=0.14
+
+# --- Visualization (for notebooks) ---
+matplotlib>=3.7
+seaborn>=0.12
+
+# --- Testing ---
+pytest>=7.4
+
+# --- Utilities ---
+tqdm>=4.65
