@@ -86,6 +86,9 @@ def run_optuna_tuning(
         valid_labels = labels_df["label"].value_counts()
         if len(valid_labels) < 3:
             return -999.0  # Missing buy, sell, or hold labels completely
+        # NEW GUARD: Ensure each class has enough samples to be split across folds
+        if valid_labels.min() < 100:
+            return -999.0  # Too few samples in the minority class (avoids fold crashes)
 
         # --- 3. Compute Sample Weights ---
         sample_weights = compute_sample_weights(labels_df)
