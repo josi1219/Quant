@@ -29,12 +29,7 @@ sys.path.insert(0, '/content/drive/MyDrive/trading_model')
 import sys
 from pathlib import Path
 
-try:
-    from google.colab import drive  # noqa: F401
-    PROJECT_ROOT = Path("/content/drive/MyDrive/trading_model")
-except ImportError:
-    PROJECT_ROOT = Path(__file__).resolve().parent.parent
-
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
