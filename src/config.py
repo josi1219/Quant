@@ -123,7 +123,7 @@ class FeatureConfig:
 class LabelConfig:
     """Triple-barrier labeling parameters for M5 intraday swing trades."""
 
-    # Barrier widths as multiples of daily volatility — SYMMETRIC
+    # Barrier widths as multiples of daily volatility — ASYMMETRIC
     pt_multiplier: float = 2.2   # Take-profit (Optimized)
     sl_multiplier: float = 0.7   # Stop-loss (Optimized)
 

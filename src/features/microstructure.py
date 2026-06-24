@@ -54,8 +54,8 @@ def compute_microstructure_features(
     result["volume_zscore"] = _rolling_zscore(
         result["tick_volume"].astype(float), window
     )
-    # Volume relative to daily average (96 bars = 1 day of M15)
-    vol_daily_avg = result["tick_volume"].rolling(window=96, min_periods=20).mean()
+    # Volume relative to daily average
+    vol_daily_avg = result["tick_volume"].rolling(window=config.micro_vol_lookback, min_periods=20).mean()
     result["volume_ratio"] = result["tick_volume"] / vol_daily_avg.replace(0, np.nan)
 
     # --- Spread features ---
@@ -71,20 +71,20 @@ def compute_microstructure_features(
     result["kyle_lambda"] = returns.abs() / safe_volume
     # Smooth it with a rolling median (more robust than mean for this)
     result["kyle_lambda_smooth"] = (
-        result["kyle_lambda"].rolling(window=96, min_periods=20).median()
+        result["kyle_lambda"].rolling(window=config.micro_vol_lookback, min_periods=20).median()
     )
 
     # --- Amihud Illiquidity ---
     # abs(return) / (volume × price) — higher = more illiquid
     result["amihud"] = returns.abs() / (safe_volume * result["close"])
     result["amihud_smooth"] = (
-        result["amihud"].rolling(window=96, min_periods=20).median()
+        result["amihud"].rolling(window=config.micro_vol_lookback, min_periods=20).median()
     )
 
     # --- VPIN (simplified) ---
     # Volume-synchronized probability of informed trading
     # Simplified version: ratio of buy vs sell volume estimated from candle shape
-    result["vpin"] = _compute_vpin(result, lookback=96)
+    result["vpin"] = _compute_vpin(result, lookback=config.micro_vpin_lookback)
 
     # --- Bar structure features ---
     # Candle body ratio: (close - open) / (high - low)
@@ -135,7 +135,7 @@ def _rolling_zscore(series: pd.Series, window: int) -> pd.Series:
     return zscore
 
 
-def _compute_vpin(df: pd.DataFrame, lookback: int = 96) -> pd.Series:
+def _compute_vpin(df: pd.DataFrame, lookback: int = 48) -> pd.Series:
     """
     Simplified VPIN (Volume-synchronized Probability of Informed Trading).
 

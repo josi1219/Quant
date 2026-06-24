@@ -94,26 +94,29 @@ def compute_sample_weights(
 def _compute_concurrency(labels_df: pd.DataFrame) -> pd.Series:
     """
     Compute the number of concurrent (overlapping) events at each timestamp.
-
-    An event is "active" from its start time (the index) to its end time (t1).
-    Concurrency at time t = count of events where start <= t <= t1.
+    Uses O(n) vectorized logic instead of O(n^2) loops.
+    
+    An event is "active" from its start time (the index) to its end time (t1) inclusive.
+    Concurrency at time t = (total starts <= t) - (total ends < t).
     """
-    # Get all unique timestamps in the data
-    t0_series = labels_df.index  # Event start times
-    t1_series = labels_df["t1"]  # Event end times
+    t0_series = labels_df.index
+    t1_series = labels_df["t1"].dropna()
 
     # Build a timeline of all relevant timestamps
-    all_times = sorted(set(t0_series) | set(t1_series.dropna()))
-    concurrency = pd.Series(0, index=all_times, dtype=int)
-
-    for t0, t1 in zip(t0_series, t1_series):
-        if pd.isna(t1):
-            continue
-        # Increment concurrency for all timestamps in [t0, t1]
-        mask = (concurrency.index >= t0) & (concurrency.index <= t1)
-        concurrency.loc[mask] += 1
-
-    return concurrency
+    all_times = sorted(set(t0_series) | set(t1_series))
+    df = pd.DataFrame(index=all_times)
+    
+    # Count how many events start and end at each timestamp
+    df["starts"] = pd.Series(1, index=t0_series).groupby(level=0).sum()
+    df["ends"] = pd.Series(1, index=t1_series).groupby(level=0).sum()
+    df = df.fillna(0)
+    
+    # Concurrency at time t is total starts up to t, minus total ends strictly BEFORE t.
+    starts_cumsum = df["starts"].cumsum()
+    ends_cumsum_shifted = df["ends"].cumsum().shift(1).fillna(0)
+    
+    concurrency = starts_cumsum - ends_cumsum_shifted
+    return concurrency.astype(int)
 
 
 def _compute_avg_uniqueness(
