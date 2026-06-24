@@ -125,30 +125,35 @@ def _compute_avg_uniqueness(
 ) -> pd.Series:
     """
     Compute the average uniqueness of each event.
-
-    Uniqueness at time t = 1 / concurrency(t).
-    Average uniqueness of event i = mean(uniqueness(t)) for t in [t0_i, t1_i].
+    Uses O(n) vectorized cumulative sum lookups instead of O(n^2) loops.
     """
-    uniqueness_values = []
-
-    for t0, row in labels_df.iterrows():
-        t1 = row["t1"]
-        if pd.isna(t1):
-            uniqueness_values.append(1.0)
-            continue
-
-        # Get concurrency values in [t0, t1]
-        mask = (concurrency.index >= t0) & (concurrency.index <= t1)
-        event_concurrency = concurrency.loc[mask]
-
-        if len(event_concurrency) == 0 or event_concurrency.sum() == 0:
-            uniqueness_values.append(1.0)
-        else:
-            # Uniqueness = 1/c at each timestep, averaged over the event
-            avg_u = (1.0 / event_concurrency).mean()
-            uniqueness_values.append(avg_u)
-
-    return pd.Series(uniqueness_values, index=labels_df.index)
+    valid_mask = labels_df["t1"].notna()
+    valid_t0 = labels_df.index[valid_mask]
+    valid_t1 = labels_df.loc[valid_mask, "t1"]
+    
+    # Precompute 1/c at each timestamp
+    u_t = 1.0 / concurrency.replace(0, np.nan)
+    u_t = u_t.fillna(0)
+    
+    # Cumulative sum of uniqueness and counts
+    U = u_t.cumsum()
+    C = pd.Series(1, index=concurrency.index).cumsum()
+    
+    # Shifted cumsums to subtract the strictly-before values
+    U_shifted = U.shift(1).fillna(0)
+    C_shifted = C.shift(1).fillna(0)
+    
+    # Fast vectorized O(1) lookups per row
+    sum_u = U.loc[valid_t1].values - U_shifted.loc[valid_t0].values
+    count = C.loc[valid_t1].values - C_shifted.loc[valid_t0].values
+    
+    avg_u = sum_u / np.maximum(count, 1)
+    
+    # Create final series, filling missing t1 with 1.0
+    result = pd.Series(1.0, index=labels_df.index)
+    result.loc[valid_t0] = avg_u
+    
+    return result
 
 
 # ─── Convenience: run as script ───────────────────────────────────────────────
