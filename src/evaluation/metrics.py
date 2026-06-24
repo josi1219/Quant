@@ -167,9 +167,8 @@ def _trading_metrics(
     cooldown_time = pd.Timedelta(minutes=cooldown_bars * 5)
     
     active_exits = []
-    last_entry_time = pd.Timestamp.min
-    if last_entry_time.tz is None and y_pred.index.tz is not None:
-        last_entry_time = last_entry_time.tz_localize(y_pred.index.tz)
+    # Avoid pd.Timestamp.min as subtracting it from 2023 overflows Timedelta max (292 years)
+    last_entry_time = y_pred.index[0] - pd.Timedelta(days=1)
 
     for i in range(len(y_pred)):
         pred = y_pred.iloc[i]
