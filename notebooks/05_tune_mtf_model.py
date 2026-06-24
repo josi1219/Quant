@@ -79,27 +79,42 @@ print("\n" + format_metrics(best_result.avg_metrics))
 
 print("\nTo use these settings permanently, update your src/config.py file.")
 
-# %% — Step 4: Auto-Save Final Model
+# %% — Step 4: Auto-Save to Google Drive or Local
 print("\n" + "=" * 60)
-print("SAVING FINAL MODEL")
+print("Auto-Saving Best Model...")
 print("=" * 60)
 
-import joblib
+import pickle
 import json
-from datetime import datetime
 
-models_dir = PROJECT_ROOT / "models"
-models_dir.mkdir(exist_ok=True)
+# Determine save path (Colab Drive root vs Local project root)
+drive_root = Path("/content/drive/MyDrive")
+if drive_root.exists():
+    save_dir = drive_root / "models"
+else:
+    save_dir = PROJECT_ROOT / "models"
+save_dir.mkdir(parents=True, exist_ok=True)
 
-timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-model_path = models_dir / f"mtf_model_{timestamp}.joblib"
-config_path = models_dir / f"mtf_config_{timestamp}.json"
+# 1. Save standard pickle
+model_path = save_dir / "version_2.pkl"
+with open(model_path, "wb") as f:
+    pickle.dump(best_result.model, f)
 
-# Save the final LightGBM model trained on all data
-joblib.dump(best_result.model, model_path)
-print(f"Model saved to: {model_path}")
+# 2. Save native LightGBM booster
+lgbm_path = save_dir / "version_2.lgbm"
+best_result.model.booster_.save_model(str(lgbm_path))
 
-# Save the config dict
-with open(config_path, "w") as f:
-    json.dump(best_result.config, f, indent=4)
-print(f"Config saved to: {config_path}")
+# 3. Save feature spec specifications
+spec_path = save_dir / "version_2_spec.json"
+spec = {
+    "feature_names": list(X.columns),
+    "metadata": {k: v for k, v in meta.items() if isinstance(v, (str, int, float, bool))}
+}
+with open(spec_path, "w") as f:
+    json.dump(spec, f, indent=2)
+
+print("SUCCESSFULLY AUTO-SAVED!")
+print(f"  Saved directory: {save_dir}")
+print(f"  Model pickle:    version_2.pkl")
+print(f"  Model Booster:   version_2.lgbm")
+print(f"  Specs JSON:      version_2_spec.json")
