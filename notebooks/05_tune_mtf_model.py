@@ -78,3 +78,28 @@ print(f"Max Holding Period: {best_config.labels.max_holding_period} M5 bars")
 print("\n" + format_metrics(best_result.avg_metrics))
 
 print("\nTo use these settings permanently, update your src/config.py file.")
+
+# %% — Step 4: Auto-Save Final Model
+print("\n" + "=" * 60)
+print("SAVING FINAL MODEL")
+print("=" * 60)
+
+import joblib
+import json
+from datetime import datetime
+
+models_dir = PROJECT_ROOT / "models"
+models_dir.mkdir(exist_ok=True)
+
+timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+model_path = models_dir / f"mtf_model_{timestamp}.joblib"
+config_path = models_dir / f"mtf_config_{timestamp}.json"
+
+# Save the final LightGBM model trained on all data
+joblib.dump(best_result.model, model_path)
+print(f"Model saved to: {model_path}")
+
+# Save the config dict
+with open(config_path, "w") as f:
+    json.dump(best_result.config, f, indent=4)
+print(f"Config saved to: {config_path}")

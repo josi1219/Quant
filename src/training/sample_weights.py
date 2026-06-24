@@ -80,7 +80,7 @@ def compute_sample_weights(
         weights.min(),
         weights.max(),
         weights.mean(),
-        (weights ** 2).sum() ** -1 * weights.sum() if len(weights) > 0 else 0,
+        (weights.sum() ** 2) / (weights ** 2).sum() if len(weights) > 0 else 0,
         len(weights),
     )
 
