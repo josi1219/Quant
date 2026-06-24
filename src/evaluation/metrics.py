@@ -159,24 +159,38 @@ def _trading_metrics(
     # Get t1 to track exit times
     t1_times = aligned["t1"] if "t1" in aligned.columns else None
 
-    # Filter trades to One-Trade-At-A-Time (no overlaps)
+    # Filter trades: Configurable concurrent limit with cooldown
     trade_mask = pd.Series(False, index=y_pred.index)
-    active_until = pd.Timestamp.min
-    if active_until.tz is None and y_pred.index.tz is not None:
-        active_until = active_until.tz_localize(y_pred.index.tz)
+    
+    max_open_trades = cfg.training.max_open_trades
+    cooldown_bars = cfg.training.cooldown_bars
+    cooldown_time = pd.Timedelta(minutes=cooldown_bars * 5)
+    
+    active_exits = []
+    last_entry_time = pd.Timestamp.min
+    if last_entry_time.tz is None and y_pred.index.tz is not None:
+        last_entry_time = last_entry_time.tz_localize(y_pred.index.tz)
 
     for i in range(len(y_pred)):
         pred = y_pred.iloc[i]
         dt = y_pred.index[i]
         
-        if pred != 0 and dt >= active_until:
-            trade_mask.iloc[i] = True
-            # Find when this trade exits
-            if t1_times is not None and pd.notna(t1_times.iloc[i]):
-                active_until = t1_times.iloc[i]
-            else:
-                # Fallback: estimate time if t1 missing
-                active_until = dt + pd.to_timedelta(holding_period.iloc[i] * 5, unit='min')
+        # Purge closed trades from active list
+        active_exits = [exit_dt for exit_dt in active_exits if exit_dt > dt]
+        
+        if pred != 0:
+            if len(active_exits) < max_open_trades and (dt - last_entry_time) >= cooldown_time:
+                trade_mask.iloc[i] = True
+                last_entry_time = dt
+                
+                # Find when this trade exits
+                if t1_times is not None and pd.notna(t1_times.iloc[i]):
+                    exit_time = t1_times.iloc[i]
+                else:
+                    # Fallback: estimate time if t1 missing
+                    exit_time = dt + pd.to_timedelta(holding_period.iloc[i] * 5, unit='min')
+                    
+                active_exits.append(exit_time)
 
     # Compute PnL per prediction
     # Long: pnl = ret_pips; Short: pnl = -ret_pips; Hold: pnl = 0

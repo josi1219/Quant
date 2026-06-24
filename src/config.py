@@ -124,11 +124,11 @@ class LabelConfig:
     """Triple-barrier labeling parameters for M5 intraday swing trades."""
 
     # Barrier widths as multiples of daily volatility — SYMMETRIC
-    pt_multiplier: float = 1.5   # Take-profit (was 2.0)
-    sl_multiplier: float = 1.5   # Stop-loss (was 1.0)
+    pt_multiplier: float = 2.2   # Take-profit (Optimized)
+    sl_multiplier: float = 0.7   # Stop-loss (Optimized)
 
     # Holding period in M5 bars
-    max_holding_period: int = 96   # 96 M5 bars = 8 hours
+    max_holding_period: int = 36   # 36 M5 bars = 3 hours (Optimized)
     min_holding_period: int = 24   # 24 M5 bars = 2 hours (NEW)
     min_return_pips: float = 3.0   # Trades < 3 pips are "Hold" (was 0.0)
 
@@ -177,6 +177,10 @@ class TrainingConfig:
     optuna_n_trials: int = 80    # Increased from 50
     optuna_timeout: int = 7200   # 2 hours
     optuna_pruning: bool = True  # Use MedianPruner
+
+    # Concurrent Trade Filtering
+    max_open_trades: int = 3     # Maximum concurrent trades allowed
+    cooldown_bars: int = 6       # Wait 6 M5 bars (30m) between trades
 
     # Random seed for reproducibility
     seed: int = 42
