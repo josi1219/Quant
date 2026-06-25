@@ -206,6 +206,10 @@ def run_optuna_tuning(
     })
     best_config.training.lgbm_params = best_lgbm_params
 
+    logger.info("\nOptimal LightGBM Settings:")
+    for k, v in best_lgbm_params.items():
+        logger.info("  %s: %s", k, v)
+
     logger.info("\nRe-training optimal model to get final metrics...")
     
     # Generate labels one last time with optimal settings
