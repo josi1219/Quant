@@ -124,11 +124,11 @@ class LabelConfig:
     """Triple-barrier labeling parameters for M5 intraday swing trades."""
 
     # Barrier widths as multiples of daily volatility — ASYMMETRIC
-    pt_multiplier: float = 2.2   # Take-profit (Optimized)
-    sl_multiplier: float = 0.7   # Stop-loss (Optimized)
+    pt_multiplier: float = 2.4   # Take-profit (Optimized)
+    sl_multiplier: float = 1.7   # Stop-loss (Optimized)
 
     # Holding period in M5 bars
-    max_holding_period: int = 36   # 36 M5 bars = 3 hours (Optimized)
+    max_holding_period: int = 48   # 48 M5 bars = 4 hours
     min_holding_period: int = 24   # 24 M5 bars = 2 hours (NEW)
     min_return_pips: float = 3.0   # Trades < 3 pips are "Hold" (was 0.0)
 
@@ -191,7 +191,7 @@ class MetaLabelConfig:
     """Meta-labeling and trade filtering settings."""
 
     enabled: bool = True
-    confidence_threshold: float = 0.45  # Min probability to take a trade
+    confidence_threshold: float = 0.55  # Min probability to take a trade
 
     # Secondary meta-model parameters
     meta_model_params: dict = field(
