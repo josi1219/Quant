@@ -18,6 +18,7 @@ Usage:
 from __future__ import annotations
 
 import logging
+import copy
 from dataclasses import dataclass, field
 from typing import Any, Optional
 
@@ -291,7 +292,7 @@ def train_with_optuna(
         }
 
         # Override config with trial params
-        trial_config = Config()
+        trial_config = copy.deepcopy(config)
         trial_config.training.lgbm_params = params
         trial_config.training.n_splits = tc.n_splits
         trial_config.training.embargo_pct = tc.embargo_pct
@@ -319,7 +320,7 @@ def train_with_optuna(
     logger.info("  Best params: %s", study.best_params)
 
     # Retrain with best params
-    best_config = Config()
+    best_config = copy.deepcopy(config)
     best_params = {
         **tc.lgbm_params,
         **study.best_params,

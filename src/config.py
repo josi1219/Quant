@@ -124,12 +124,12 @@ class LabelConfig:
     """Triple-barrier labeling parameters for M5 intraday swing trades."""
 
     # Barrier widths as multiples of daily volatility — ASYMMETRIC
-    pt_multiplier: float = 2.4   # Take-profit (Optimized)
-    sl_multiplier: float = 1.7   # Stop-loss (Optimized)
+    pt_multiplier: float = 0.8   # Take-profit (Optimized for shorter hold)
+    sl_multiplier: float = 0.8   # Stop-loss (Optimized for shorter hold)
 
     # Holding period in M5 bars
     max_holding_period: int = 48   # 48 M5 bars = 4 hours
-    min_holding_period: int = 24   # 24 M5 bars = 2 hours (NEW)
+    min_holding_period: int = 12   # 12 M5 bars = 1 hour (NEW)
     min_return_pips: float = 3.0   # Trades < 3 pips are "Hold" (was 0.0)
 
     # Daily volatility estimation (in M5 bars)

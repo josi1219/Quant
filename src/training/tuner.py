@@ -64,16 +64,21 @@ def run_optuna_tuning(
         """Optuna objective function."""
         # --- 1. Sample Barrier Parameters ---
         # Instead of guessing 1.5x vol and 8 hrs, let Optuna find it!
-        pt_mult = trial.suggest_float("pt_multiplier", 0.5, 3.0, step=0.1)
-        sl_mult = trial.suggest_float("sl_multiplier", 0.5, 3.0, step=0.1)
+        pt_mult = trial.suggest_float("pt_multiplier", 0.1, 1.5, step=0.1)
+        sl_mult = trial.suggest_float("sl_multiplier", 0.1, 1.5, step=0.1)
+        vol_lookback = trial.suggest_int("vol_lookback", 24, 288, step=24)
         # Hold time: 24 bars (2 hrs) up to 48 bars (4 hrs)
         max_hold = trial.suggest_int("max_holding_period", 24, 48, step=12)
+        # Min hold time: 6 bars (30 mins) to 18 bars (90 mins) to ensure it's less than max_hold
+        min_hold = trial.suggest_int("min_holding_period", 6, 18, step=6)
 
         # Build trial config
         trial_config = copy.deepcopy(base_config)
         trial_config.labels.pt_multiplier = pt_mult
         trial_config.labels.sl_multiplier = sl_mult
+        trial_config.labels.vol_lookback = vol_lookback
         trial_config.labels.max_holding_period = max_hold
+        trial_config.labels.min_holding_period = min_hold
 
         # --- 2. Generate Labels for this trial ---
         labels_df = get_labels_for_features(
@@ -177,15 +182,19 @@ def run_optuna_tuning(
     logger.info("\nOptimal Barrier Settings:")
     logger.info("  pt_multiplier: %.2f", best_params["pt_multiplier"])
     logger.info("  sl_multiplier: %.2f", best_params["sl_multiplier"])
+    logger.info("  vol_lookback: %d bars", best_params["vol_lookback"])
     logger.info("  max_holding_period: %d bars", best_params["max_holding_period"])
+    logger.info("  min_holding_period: %d bars", best_params["min_holding_period"])
     
     # Re-train the best model to return it
     best_config = copy.deepcopy(base_config)
     best_config.labels.pt_multiplier = best_params["pt_multiplier"]
     best_config.labels.sl_multiplier = best_params["sl_multiplier"]
+    best_config.labels.vol_lookback = best_params["vol_lookback"]
     best_config.labels.max_holding_period = best_params["max_holding_period"]
+    best_config.labels.min_holding_period = best_params["min_holding_period"]
     
-    lgbm_keys = [k for k in best_params.keys() if k not in ["pt_multiplier", "sl_multiplier", "max_holding_period"]]
+    lgbm_keys = [k for k in best_params.keys() if k not in ["pt_multiplier", "sl_multiplier", "vol_lookback", "max_holding_period", "min_holding_period"]]
     best_lgbm_params = {k: best_params[k] for k in lgbm_keys}
     best_lgbm_params.update({
         "objective": "multiclass",
