@@ -152,22 +152,22 @@ class TrainingConfig:
     n_splits: int = 5
     embargo_pct: float = 0.01  # Fraction of test size used as embargo
 
-    # LightGBM defaults (will be tuned by Optuna)
+    # LightGBM defaults (Optimized via Optuna)
     lgbm_params: dict = field(
         default_factory=lambda: {
             "objective": "multiclass",
             "num_class": 3,
             "metric": "multi_logloss",
             "boosting_type": "gbdt",
-            "n_estimators": 500,
-            "learning_rate": 0.05,
-            "max_depth": 6,
-            "num_leaves": 31,
-            "min_child_samples": 50,
-            "subsample": 0.8,
-            "colsample_bytree": 0.8,
-            "reg_alpha": 0.1,
-            "reg_lambda": 1.0,
+            "n_estimators": 100,
+            "learning_rate": 0.025786822464199596,
+            "max_depth": 4,
+            "num_leaves": 57,
+            "min_child_samples": 251,
+            "subsample": 0.7221245396883601,
+            "colsample_bytree": 0.7186957086455583,
+            "reg_alpha": 0.2415549818183783,
+            "reg_lambda": 0.5059938348121182,
             "random_state": 42,
             "verbose": -1,
         }
