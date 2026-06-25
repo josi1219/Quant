@@ -124,16 +124,16 @@ class LabelConfig:
     """Triple-barrier labeling parameters for M5 intraday swing trades."""
 
     # Barrier widths as multiples of daily volatility — ASYMMETRIC
-    pt_multiplier: float = 0.8   # Take-profit (Optimized for shorter hold)
-    sl_multiplier: float = 0.8   # Stop-loss (Optimized for shorter hold)
+    pt_multiplier: float = 0.70  # Take-profit (Optimized via Optuna)
+    sl_multiplier: float = 0.40  # Stop-loss (Optimized via Optuna)
 
     # Holding period in M5 bars
-    max_holding_period: int = 48   # 48 M5 bars = 4 hours
-    min_holding_period: int = 12   # 12 M5 bars = 1 hour (NEW)
+    max_holding_period: int = 24   # 24 M5 bars = 2 hours (Optimized via Optuna)
+    min_holding_period: int = 6    # 6 M5 bars = 30 mins (Optimized via Optuna)
     min_return_pips: float = 3.0   # Trades < 3 pips are "Hold" (was 0.0)
 
     # Daily volatility estimation (in M5 bars)
-    vol_lookback: int = 288        # 1 day of M5 bars (was 96 for M15)
+    vol_lookback: int = 264        # (Optimized via Optuna)
 
     # Dynamic barriers — scale by regime volatility
     dynamic_barriers: bool = True
