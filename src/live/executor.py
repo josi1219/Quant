@@ -303,13 +303,13 @@ class LiveExecutor:
 
         # 8. Send Order with Dynamic Position Sizing
         if confidence >= cfg.meta_label.full_position_threshold:
-            lot_size = 0.1
+            lot_size = 4.0
         elif confidence >= cfg.meta_label.half_position_threshold:
-            lot_size = 0.05
+            lot_size = 2.0
         elif confidence >= cfg.meta_label.quarter_position_threshold:
-            lot_size = 0.02
+            lot_size = 1.0
         else:
-            lot_size = 0.01  # Minimum base size
+            lot_size = 0.5  # Minimum base size
             
         success = self.client.execute_trade(signal=signal, volume=lot_size, pt_price=pt_price, sl_price=sl_price, tick=tick, magic=1219)
         if success:
