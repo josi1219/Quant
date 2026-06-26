@@ -191,7 +191,7 @@ class MetaLabelConfig:
     """Meta-labeling and trade filtering settings."""
 
     enabled: bool = True
-    confidence_threshold: float = 0.55  # Min probability to take a trade
+    confidence_threshold: float = 0.40  # Min probability to take a trade
 
     # Secondary meta-model parameters
     meta_model_params: dict = field(

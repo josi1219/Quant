@@ -322,31 +322,59 @@ def _rolling_hurst(
     min_periods: int = 10,
 ) -> pd.Series:
     """
-    Simplified rolling Hurst exponent estimate.
+    Vectorized rolling Hurst exponent estimate using the R/S method.
 
-    Uses the rescaled range (R/S) method over a rolling window.
     H > 0.5 → trending (persistent)
     H ≈ 0.5 → random walk
     H < 0.5 → mean-reverting (anti-persistent)
+
+    Uses numpy stride tricks to build the rolling window matrix once and
+    compute R/S on all windows in parallel, avoiding the per-window Python
+    callback overhead of ``rolling().apply()``.
     """
-    log_returns = np.log(series / series.shift(1))
+    from numpy.lib.stride_tricks import as_strided
 
-    def _hurst_rs(window):
-        """Compute Hurst for a single window using R/S method."""
-        if len(window) < 10 or window.std() == 0:
-            return np.nan
-        mean_adj = window - window.mean()
-        cumsum = mean_adj.cumsum()
-        r = cumsum.max() - cumsum.min()
-        s = window.std(ddof=1)
-        if s == 0 or r == 0:
-            return np.nan
-        # H = log(R/S) / log(n)
-        n = len(window)
-        return np.log(r / s) / np.log(n)
+    log_returns = np.log(series / series.shift(1)).values
+    n = len(log_returns)
+    result = np.full(n, np.nan)
 
-    hurst = log_returns.rolling(
-        window=lookback, min_periods=min_periods
-    ).apply(_hurst_rs, raw=False)
+    if n < lookback:
+        return pd.Series(result, index=series.index)
 
-    return hurst
+    # Build a (n - lookback + 1, lookback) view using stride tricks — zero copy.
+    itemsize = log_returns.strides[0]
+    windows = as_strided(
+        log_returns,
+        shape=(n - lookback + 1, lookback),
+        strides=(itemsize, itemsize),
+    ).copy()  # copy so downstream ops don't corrupt the original array
+
+    # Count non-NaN values per window to enforce min_periods
+    non_nan_counts = np.sum(~np.isnan(windows), axis=1)
+
+    # Mean-adjust each row (ignore NaN)
+    means = np.nanmean(windows, axis=1, keepdims=True)
+    mean_adj = windows - means
+
+    # Cumulative sum along each row (treating NaN as 0 for robustness)
+    cumsums = np.nancumsum(mean_adj, axis=1)
+
+    # R = max - min of cumulative deviations within each window
+    r = cumsums.max(axis=1) - cumsums.min(axis=1)
+
+    # S = std (ddof=1) of the raw returns in each window
+    s = np.nanstd(windows, axis=1, ddof=1)
+
+    # Valid mask: enough data, non-zero S and R
+    valid = (s > 0) & (r > 0) & (non_nan_counts >= min_periods)
+
+    hurst_vals = np.where(
+        valid,
+        np.log(r / np.where(valid, s, 1.0)) / np.log(lookback),
+        np.nan,
+    )
+
+    # Place results at the END of each window (standard rolling convention)
+    result[lookback - 1 :] = hurst_vals
+
+    return pd.Series(result, index=series.index)

@@ -244,10 +244,10 @@ def _trading_metrics(
     )
 
     # Calculate Daily Sharpe Ratio
-    # Group PnL by calendar day
-    daily_pnl = pnl_pips.resample("D").sum()
+    # Group PnL by business day to avoid artificial 0.0 variance on weekends
+    daily_pnl = pnl_pips.resample("B").sum()
     # Subtract costs daily (only for trades made that day)
-    daily_trades = trade_mask.resample("D").sum()
+    daily_trades = trade_mask.resample("B").sum()
     daily_net_pnl = daily_pnl - (daily_trades * total_cost)
 
     if daily_net_pnl.std() > 0:

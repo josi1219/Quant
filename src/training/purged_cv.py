@@ -86,7 +86,9 @@ class PurgedWalkForwardCV:
 
         # Calculate test size (expanding training window)
         test_size = n_samples // (self.n_splits + 1)
-        embargo_size = int(test_size * self.embargo_pct)
+        # Embargo: the larger of a percentage of test size (using embargo_pct) or a hard
+        # minimum of 24 bars (2 hours) to always cover at least the max holding period.
+        embargo_size = max(24, int(test_size * self.embargo_pct))
 
         logger.info(
             "PurgedWalkForwardCV: n_splits=%d, test_size=%d, embargo=%d",

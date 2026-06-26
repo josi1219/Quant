@@ -17,6 +17,7 @@ import logging
 from pathlib import Path
 from typing import Optional
 
+import lightgbm as lgb
 import numpy as np
 import pandas as pd
 
@@ -114,9 +115,13 @@ def export_model(
 
 def load_model(
     model_path: Path,
-) -> object:
+) -> lgb.Booster:
     """
-    Load a saved LightGBM model.
+    Load a saved LightGBM model as a native Booster.
+
+    Returns a ``lgb.Booster`` whose ``.predict()`` method returns class
+    probabilities of shape (N, 3) for the three-class problem directly.
+    Use ``booster.predict(X)`` instead of ``predict_proba``.
 
     Parameters
     ----------
@@ -125,21 +130,12 @@ def load_model(
 
     Returns
     -------
-    LGBMClassifier
-        Loaded model ready for prediction.
+    lgb.Booster
+        Native LightGBM booster ready for prediction.
     """
-    from lightgbm import Booster, LGBMClassifier
-
-    booster = Booster(model_file=str(model_path))
-
-    # Wrap in LGBMClassifier for predict/predict_proba interface
-    model = LGBMClassifier()
-    model._Booster = booster
-    model._n_classes = 3
-    model.fitted_ = True
-
+    booster = lgb.Booster(model_file=str(model_path))
     logger.info("Model loaded from %s", model_path)
-    return model
+    return booster
 
 
 # ─── Internals ────────────────────────────────────────────────────────────────

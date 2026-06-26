@@ -308,7 +308,12 @@ def train_with_optuna(
             logger.warning("Trial %d failed: %s", trial.number, e)
             return -999
 
-    study = optuna.create_study(direction="maximize")
+    pruner = (
+        optuna.pruners.MedianPruner(n_startup_trials=10, n_warmup_steps=5)
+        if tc.optuna_pruning
+        else optuna.pruners.NopPruner()
+    )
+    study = optuna.create_study(direction="maximize", pruner=pruner)
     study.optimize(
         objective,
         n_trials=tc.optuna_n_trials,

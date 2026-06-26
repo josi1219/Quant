@@ -143,7 +143,20 @@ def _compute_avg_uniqueness(
     U_shifted = U.shift(1).fillna(0)
     C_shifted = C.shift(1).fillna(0)
     
-    # Fast vectorized O(1) lookups per row
+    # Fast vectorized O(1) lookups per row.
+    # Guard: only include t1 values that are present in the concurrency index.
+    # t1 values outside the index can occur when labels are generated on a
+    # subset that was reindexed after the concurrency series was built.
+    in_index_mask = valid_t1.isin(U.index)
+    if not in_index_mask.all():
+        n_missing = (~in_index_mask).sum()
+        logger.debug(
+            "_compute_avg_uniqueness: dropping %d t1 values not in concurrency index",
+            n_missing,
+        )
+    valid_t0 = valid_t0[in_index_mask]
+    valid_t1 = valid_t1[in_index_mask]
+
     sum_u = U.loc[valid_t1].values - U_shifted.loc[valid_t0].values
     count = C.loc[valid_t1].values - C_shifted.loc[valid_t0].values
     

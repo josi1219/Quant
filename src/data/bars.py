@@ -184,6 +184,9 @@ def _aggregate_volume_bars(
     Uses numpy arrays for performance on 50k+ rows.
     """
     # Extract arrays for fast iteration
+    if len(df) == 0:
+        return []
+
     times = df.index.values
     opens = df["open"].values
     highs = df["high"].values
@@ -215,7 +218,7 @@ def _aggregate_volume_bars(
             )
             bars.append(
                 {
-                    "time": pd.Timestamp(bar_start_time),
+                    "time": pd.Timestamp(times[i]),  # Timestamp at the END of the volume bar
                     "open": bar_open,
                     "high": bar_high,
                     "low": bar_low,

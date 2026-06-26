@@ -16,6 +16,8 @@ setup(
         "scikit-learn>=1.3",
         "statsmodels>=0.14",
         "tqdm>=4.65",
+        "MetaTrader5>=5.0.45",
+        "schedule>=1.2.0",
     ],
     extras_require={
         "dev": ["pytest>=7.4", "matplotlib>=3.7", "seaborn>=0.12"],

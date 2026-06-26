@@ -45,29 +45,27 @@ logger = logging.getLogger(__name__)
 
 # Features that are already bounded and should NOT be z-scored
 BOUNDED_FEATURES = {
-    # M5 bounded
-    "rsi",
-    "bb_position",
-    "body_ratio",
-    "upper_shadow_ratio",
-    "lower_shadow_ratio",
-    "hour_sin",
-    "hour_cos",
-    "dow_sin",
-    "dow_cos",
-    # H1 bounded
-    "rsi_h1",
-    "bb_position_h1",
-    # Cross-TF bounded
-    "trend_alignment",
-    "macd_alignment",
-    # Session bounded
-    "session_id",
-    "is_london_ny_overlap",
-    "session_elapsed_pct",
-    # Regime bounded
-    "momentum_quality",
-    "consecutive_direction",
+    # M5 indicators — already bounded or normalized
+    "rsi", "bb_position",
+    "body_ratio", "upper_shadow_ratio", "lower_shadow_ratio",
+    "vpin", "volume_zscore", "spread_zscore",
+    # Cyclical time encodings — bounded [-1, 1]
+    "hour_sin", "hour_cos", "dow_sin", "dow_cos",
+    # H1 indicators — already bounded
+    "rsi_h1", "bb_position_h1",
+    # H1 regime — Hurst exponent is [0, 1]; 0.5 = random walk boundary must be preserved
+    "hurst_h1",
+    # Cross-TF alignment — sign-based, bounded {-1, 0, 1}
+    "trend_alignment", "macd_alignment",
+    # Session — bounded by construction
+    "session_id", "is_london_ny_overlap", "session_elapsed_pct",
+    # Regime — vol_regime and vol_regime_h1 are short/long vol ratios;
+    # 1.0 is the neutral boundary and must not be shifted by z-scoring
+    "vol_regime", "vol_regime_h1",
+    # RSI divergence is bounded [-100, 100] with 0 as natural midpoint
+    "m5_vs_h1_rsi_divergence",
+    # Momentum quality [0, 1] and consecutive direction (integer count)
+    "momentum_quality", "consecutive_direction",
 }
 
 # Columns that are raw data, not features (will be excluded from final X)
@@ -126,12 +124,13 @@ def build_features_mtf(
             volume_threshold=config.features.volume_bar_size,
         )
         if len(df) < 500:
-            logger.warning(
-                "Volume bars produced only %d bars. Falling back to time bars.",
-                len(df),
+            msg = (
+                f"Volume bars produced only {len(df)} bars (requires >=500). "
+                "The model was trained on volume bars and cannot safely fall back to "
+                "time bars. Please fetch more historical data."
             )
-            df = df_m5.copy()
-            metadata["used_volume_bars"] = False
+            logger.error(msg)
+            raise RuntimeError(msg)
         else:
             metadata["used_volume_bars"] = True
     else:
@@ -243,12 +242,13 @@ def build_features(
             volume_threshold=config.features.volume_bar_size,
         )
         if len(df) < 200:
-            logger.warning(
-                "Volume bars produced only %d bars. Falling back to time bars.",
-                len(df),
+            msg = (
+                f"Volume bars produced only {len(df)} bars (requires >=200). "
+                "The model was trained on volume bars and cannot safely fall back to "
+                "time bars. Please fetch more historical data."
             )
-            df = df_raw.copy()
-            metadata["used_volume_bars"] = False
+            logger.error(msg)
+            raise RuntimeError(msg)
         else:
             metadata["used_volume_bars"] = True
     else:

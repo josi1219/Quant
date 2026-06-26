@@ -103,7 +103,8 @@ def compute_session_features(
 
     # ── Session-relative range ────────────────────────────────────────────
     # How does today's session range compare to the average?
-    # Group by date and session, compute session high-low range
+    # For each session, compute the running intra-session high-low range
+    # (expanding within each calendar date) using a vectorized groupby approach.
     result["_date"] = result.index.date
     result["_session_range"] = np.nan
 
@@ -112,18 +113,23 @@ def compute_session_features(
         if mask.sum() == 0:
             continue
 
-        # For each date, compute the session's running range
-        # (rolling max high - rolling min low within the session so far)
-        session_data = result.loc[mask].copy()
-        for date in session_data["_date"].unique():
-            date_mask = session_data["_date"] == date
-            date_data = session_data.loc[date_mask]
-            if len(date_data) == 0:
-                continue
-            running_high = date_data["high"].expanding().max()
-            running_low = date_data["low"].expanding().min()
-            running_range = (running_high - running_low) / date_data["close"]
-            result.loc[date_data.index, "_session_range"] = running_range.values
+        session_slice = result.loc[mask, ["high", "low", "close", "_date"]].copy()
+
+        # Vectorized: group by date, compute expanding max-high and min-low
+        # within each session day, then assign back in one shot.
+        session_slice["_run_high"] = (
+            session_slice.groupby("_date")["high"]
+            .transform(lambda s: s.expanding().max())
+        )
+        session_slice["_run_low"] = (
+            session_slice.groupby("_date")["low"]
+            .transform(lambda s: s.expanding().min())
+        )
+        running_range = (
+            (session_slice["_run_high"] - session_slice["_run_low"])
+            / session_slice["close"]
+        )
+        result.loc[mask, "_session_range"] = running_range.values
 
     # Compare to rolling average session range
     avg_session_range = result["_session_range"].rolling(
